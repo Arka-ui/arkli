@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { log } from '../utils/logger.js';
-import { installPackage, IS_LINUX, getProject } from '../utils/system.js';
+import { installPackage, IS_LINUX, getProject, writePrivilegedFile } from '../utils/system.js';
 import { execa } from 'execa';
 import fs from 'fs-extra';
 import path from 'path';
@@ -41,21 +41,22 @@ mailCommand.command('setup')
             try {
                 // 2. Configure Postfix
                 log.info('Configuring Postfix...');
-                await fs.writeFile('/etc/postfix/main.cf', generatePostfixMainCf(domain));
-                await fs.writeFile('/etc/postfix/master.cf', generatePostfixMasterCf());
+                await writePrivilegedFile('/etc/postfix/main.cf', generatePostfixMainCf(domain));
+                await writePrivilegedFile('/etc/postfix/master.cf', generatePostfixMasterCf());
+
                 // Create virtual alias file if not exists
                 if (!await fs.pathExists('/etc/postfix/virtual')) {
-                    await fs.writeFile('/etc/postfix/virtual', '');
+                    await writePrivilegedFile('/etc/postfix/virtual', '');
                 }
                 await execa('sudo', ['postmap', '/etc/postfix/virtual'], { stdio: 'inherit' });
 
                 // 3. Configure Dovecot
                 log.info('Configuring Dovecot...');
-                await fs.writeFile('/etc/dovecot/dovecot.conf', generateDovecotConf());
-                await fs.writeFile('/etc/dovecot/conf.d/10-mail.conf', generateDovecot10Mail());
-                await fs.writeFile('/etc/dovecot/conf.d/10-auth.conf', generateDovecot10Auth());
-                await fs.writeFile('/etc/dovecot/conf.d/10-ssl.conf', generateDovecot10Ssl(domain));
-                await fs.writeFile('/etc/dovecot/conf.d/10-master.conf', generateDovecot10Master());
+                await writePrivilegedFile('/etc/dovecot/dovecot.conf', generateDovecotConf());
+                await writePrivilegedFile('/etc/dovecot/conf.d/10-mail.conf', generateDovecot10Mail());
+                await writePrivilegedFile('/etc/dovecot/conf.d/10-auth.conf', generateDovecot10Auth());
+                await writePrivilegedFile('/etc/dovecot/conf.d/10-ssl.conf', generateDovecot10Ssl(domain));
+                await writePrivilegedFile('/etc/dovecot/conf.d/10-master.conf', generateDovecot10Master());
 
                 // 4. Restart Services
                 log.info('Restarting services...');
@@ -101,7 +102,18 @@ mailCommand.command('create <addressName>') // e.g. 'contact'
 
                 // 2. Add to Virtual Alias Map
                 // This appends "contact@domain.com    contact_arkli" to /etc/postfix/virtual
-                await fs.appendFile('/etc/postfix/virtual', `\n${email}    ${sysUser}`);
+                // Read current content
+                let currentVirtual = '';
+                try {
+                    currentVirtual = await fs.readFile('/etc/postfix/virtual', 'utf-8');
+                } catch (e) {
+                    // Ignore if missing, it will be created
+                    log.warn('/etc/postfix/virtual missing or unreadable, creating new.');
+                }
+
+                const newContent = currentVirtual + `\n${email}    ${sysUser}`;
+                await writePrivilegedFile('/etc/postfix/virtual', newContent);
+
                 await execa('sudo', ['postmap', '/etc/postfix/virtual'], { stdio: 'inherit' });
                 await execa('sudo', ['systemctl', 'reload', 'postfix'], { stdio: 'inherit' });
 

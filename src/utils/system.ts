@@ -150,3 +150,41 @@ export const checkAndInstallUFW = async () => {
         // await execa('sudo', ['ufw', 'enable'], { stdio: 'inherit' });
     }
 };
+
+/**
+ * Writes a file with sudo privileges by writing to a temp file first and moving it.
+ * Necessary for writing to /etc/ without running the main process as root.
+ */
+export const writePrivilegedFile = async (filePath: string, content: string) => {
+    if (IS_LINUX) {
+        const tempPath = path.join(os.tmpdir(), `arkli_${Date.now()}_${path.basename(filePath)}`);
+        try {
+            // 1. Write to temp file as current user
+            await fs.writeFile(tempPath, content);
+
+            // 2. Move to destination using sudo (overwrites if exists)
+            await execa('sudo', ['mv', tempPath, filePath], { stdio: 'inherit' });
+
+            // 3. Ensure root ownership
+            await execa('sudo', ['chown', 'root:root', filePath], { stdio: 'inherit' });
+
+            log.info(`Securely wrote to ${filePath}`);
+        } catch (e: any) {
+            log.error(`Failed to write privileged file ${filePath}: ${e.message}`);
+            // Try to clean up temp file if move failed
+            if (await fs.pathExists(tempPath)) {
+                await fs.remove(tempPath);
+            }
+            throw e;
+        }
+    } else {
+        // Simulation / Windows
+        log.info(`(Simulation) Writing to privileged path: ${filePath}`);
+        // For development on Windows, we might write to a "mock" path or just skip
+        // If we really want to simulate file creation for testing:
+        // const mockPath = path.join(process.cwd(), 'temp_test', path.basename(filePath));
+        // await fs.ensureFile(mockPath);
+        // await fs.writeFile(mockPath, content);
+    }
+};
+
