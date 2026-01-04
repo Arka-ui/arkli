@@ -37,6 +37,20 @@ export const registerProject = async (name: string, projectPath: string, dataPat
     await fs.writeJson(registryPath, registry, { spaces: 2 });
 };
 
+export const unregisterProject = async (name: string) => {
+    const registryPath = getRegistryPath();
+    try {
+        const registry = await fs.readJson(registryPath);
+        if (registry[name]) {
+            delete registry[name];
+            await fs.writeJson(registryPath, registry, { spaces: 2 });
+            log.info(`Project ${name} removed from registry.`);
+        }
+    } catch (e) {
+        // ignore
+    }
+};
+
 export const updateProjectDomain = async (name: string, domain: string) => {
     const registryPath = getRegistryPath();
     let registry: Record<string, any> = {};
