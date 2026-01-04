@@ -329,8 +329,19 @@ webmail.command('install')
         try {
             await execa('docker', ['compose', 'up', '-d'], { cwd: webmailDir, stdio: 'inherit' });
         } catch (e: any) {
-            log.error(`Failed to start webmail container: ${e.message}`);
-            return;
+            // If permission denied, retry with sudo
+            if (e.message.includes('permission denied')) {
+                log.warn('Docker permission denied. Retrying with sudo...');
+                try {
+                    await execa('sudo', ['docker', 'compose', 'up', '-d'], { cwd: webmailDir, stdio: 'inherit' });
+                } catch (sudoErr: any) {
+                    log.error(`Failed to start webmail container even with sudo: ${sudoErr.message}`);
+                    return;
+                }
+            } else {
+                log.error(`Failed to start webmail container: ${e.message}`);
+                return;
+            }
         }
 
         // 4. Configure Nginx Proxy
