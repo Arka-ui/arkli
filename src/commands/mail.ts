@@ -113,9 +113,23 @@ mailCommand.command('setup')
                 }
 
                 // 5. Firewall
-                await execa('sudo', ['ufw', 'allow', 'PostFix'], { stdio: 'inherit' });
-                await execa('sudo', ['ufw', 'allow', 'DovecotIMAP'], { stdio: 'inherit' });
-                await execa('sudo', ['ufw', 'allow', 'DovecotSecure'], { stdio: 'inherit' });
+                log.info('Configuring Firewall (UFW)...');
+                const mailPorts = [
+                    '25/tcp',   // SMTP
+                    '587/tcp',  // Submission
+                    '143/tcp',  // IMAP
+                    '993/tcp',  // IMAPS
+                    '110/tcp',  // POP3
+                    '995/tcp'   // POP3S
+                ];
+
+                for (const port of mailPorts) {
+                    try {
+                        await execa('sudo', ['ufw', 'allow', port], { stdio: 'inherit' });
+                    } catch (e) {
+                        log.warn(`Failed to allow port ${port}, strictly speaking optional if UFW is disabled.`);
+                    }
+                }
 
                 log.success('Mail server configured successfully with SSL and Virtual Aliases.');
             } catch (e: any) {
