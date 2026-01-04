@@ -14,10 +14,12 @@ It now includes a fully-featured **Mail Server Manager** (Postfix/Dovecot) to ha
 ## 🚀 Key Features
 
 *   **⚡ Instant Scaffolding**: initialize projects with auto-generated `Dockerfile` and `docker-compose.yml`.
+*   **🧠 Environment Intelligence**: Automatically detects missing tools (Docker, Nginx, etc.) and installs them for you.
 *   **🔒 Complete Isolation**: Sensitive data (`.env`, databases) is automatically moved to a "Brain" directory, keeping your codebase clean and safe.
 *   **🐳 Docker Architecture**: Every project runs in its own container with automatically assigned unique ports.
 *   **🌐 Auto-Configuration**: Automatically generates and applies Nginx reverse proxy configurations for your custom domains.
 *   **📧 Full Mail Stack**: Automates the setup of Postfix/Dovecot with SSL, DKIM, and SPF support.
+*   **🔄 Self-Update**: Keep your server secure and up-to-date with a single command (`arkli update`).
 *   **🔐 SSL Management**: Integrated wrapper for Certbot to manage SSL certificates easily.
 *   **🔄 Database Migrations**: Unified command to run migrations across different tech stacks.
 
