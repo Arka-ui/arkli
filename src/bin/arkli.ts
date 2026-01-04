@@ -63,6 +63,9 @@ program.addCommand(monitorCommand);
 // Cert commands
 import { certCommand } from '../commands/cert.js';
 program.addCommand(certCommand);
+
+import { updateCommand } from '../commands/update.js';
+program.addCommand(updateCommand);
 // const certCmd = program.command('cert').description('Manage SSL certificates');
 // ...
 

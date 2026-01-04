@@ -9,6 +9,9 @@ export const initCommand = new Command('init')
     .action(async (name) => {
         try {
             log.info(`Starting initialization for ${name}...`);
+            const { ensureDependency } = await import('../utils/dependencies.js');
+            await ensureDependency('docker');
+
             await ensureProjectStructure(name);
             log.success(`Successfully initialized ${name}!`);
 

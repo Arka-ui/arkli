@@ -11,6 +11,9 @@ export const linkCommand = new Command('link')
     .requiredOption('-n, --name <name>', 'Project name')
     .action(async (options) => {
         const { domain, name } = options;
+        const { ensureDependency } = await import('../utils/dependencies.js');
+        await ensureDependency('nginx');
+
         log.info(`Linking domain ${domain} to project ${name}...`);
 
         const project = await getProject(name);

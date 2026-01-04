@@ -21,6 +21,8 @@ mailCommand.command('setup')
     .description('Setup mail server configuration for a project')
     .requiredOption('-n, --name <name>', 'Project name')
     .action(async (options) => {
+        const { ensureDependency } = await import('../utils/dependencies.js');
+
         const project = await getProject(options.name);
         if (!project || !project.domain) {
             log.error(`Project ${options.name} not found or has no linked domain.`);
@@ -31,10 +33,9 @@ mailCommand.command('setup')
         log.info(`Setting up mail server for ${domain}...`);
 
         // 1. Install Dependencies
-        await installPackage('postfix');
-        await installPackage('dovecot-core');
-        await installPackage('dovecot-imapd');
-        await installPackage('dovecot-pop3d');
+        await ensureDependency('postfix');
+        await ensureDependency('dovecot');
+        // dovecot dependencies handles core/imapd/pop3d via dependencies.ts logic
 
         if (IS_LINUX) {
             try {

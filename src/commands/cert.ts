@@ -11,9 +11,10 @@ certCommand.command('setup [domain]')
     .option('-a, --auto-renew', 'Enable auto renewal')
     .action(async (domain, options) => {
         log.info(`Setting up SSL for ${domain}...`);
+        const { ensureDependency } = await import('../utils/dependencies.js');
 
-        await installPackage('certbot');
-        await installPackage('python3-certbot-nginx'); // Assuming Nginx, or apache
+        await ensureDependency('certbot');
+        // await installPackage('python3-certbot-nginx'); // Handled by dependencies.ts cfg
 
         if (IS_LINUX) {
             try {
