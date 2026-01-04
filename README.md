@@ -46,67 +46,88 @@ npm link
 
 ---
 
-## 📖 Detailed Usage Guide
+## 📖 Command Reference
 
-### 1️⃣ Project Initialization
-Create a new project structure. Arkli will ask for the project name and set up the directory.
-```bash
-arkli init <project_name>
-```
+### Core Management
 
-### 2️⃣ Project Deployment
-Move an existing project into the Arkli structure. This separates your code from your data (`.env`, `db`).
-```bash
-# From inside your source code folder
-arkli move <project_name>
-```
+#### `arkli init <project_name>`
+Initializes a new project with the standard Arkli structure.
+*   **Creates**: `~/project_name` (Code) and `~/.arkli/data/project_name` (Data).
+*   **Generates**: `Dockerfile`, `docker-compose.yml`, `.env`.
+*   **Auto-Installs**: Docker & Docker Compose if missing.
 
-### 3️⃣ Domain Linking
-Expose your project to the internet using Nginx.
-```bash
-arkli link -d example.com -n <project_name>
-```
-*This command creates an Nginx config file, reloads Nginx, and sets up a reverse proxy to your Docker container.*
+#### `arkli move <project_name>`
+Migrates an *existing* project in the current directory into the Arkli structure.
+*   Safely separates your code from your data.
 
-### 4️⃣ Mail Server Config (New!)
-Turn your server into a fully functional mail server.
+#### `arkli delete -n <project_name>`
+**⚠️ DESTRUCTIVE**: Completely removes a project from the system.
+*   Stops and removes all Docker containers.
+*   Deletes Nginx configurations and SSL certificates.
+*   Removes system mail users and cleans Postfix maps.
+*   Permanently deletes all files and data.
+*   use `--force` to skip confirmation.
 
-**Step 1: Setup Infrastructure**
-Installs Postfix/Dovecot and generates secure configurations (SSL/TLS, SASL).
-```bash
-arkli mail setup -n <project_name>
-```
+#### `arkli update`
+Self-updates Arkli to the latest version and performs system-wide security updates (`apt-get upgrade`) to keep your server safe.
 
-**Step 2: Create Email Accounts**
-Maps an email address to a secure system user.
-```bash
-arkli mail create contact -n <project_name> 
-# Creates contact@example.com
-```
+---
 
-**Step 3: DNS Configuration**
-View the exact DNS records (MX, SPF, DMARC) you need to add to your registrar.
-```bash
-arkli mail dns -n <project_name>
-```
+### 🌐 Web & Domain
 
-**Step 4: Verify Health**
-Check if your mail services are active and running.
-```bash
-arkli mail verify -n <project_name>
-```
+#### `arkli link -d <domain> -n <project_name>`
+Exposes your project to the internet via Nginx.
+*   Generates an Nginx reverse proxy configuration.
+*   Reloads Nginx.
+*   Auto-installs Nginx if missing.
 
-### 5️⃣ SSL Certificates
-Secure your site with HTTPS using Certbot.
-```bash
-arkli cert setup example.com
-```
+#### `arkli cert setup <domain>`
+Secures a domain with a generic Let's Encrypt SSL certificate using Certbot.
+*   Auto-renews automatically.
 
-### 6️⃣ Monitoring
-See what's running, port allocations, and container status.
-```bash
-arkli monitor
-```
+---
+
+### 📧 Mail Server
+
+#### `arkli mail setup -n <project_name>`
+Turns your server into a full-featured mail server for the project's domain.
+*   Installs Postfix & Dovecot.
+*   Configures SSL/TLS, SASL Authentication, and Maildir.
+*   **Auto-Heals**: Automatically fixes common errors (like missing SSL).
+
+#### `arkli mail create <user> -n <project_name>`
+Creates a new email address (e.g., `contact@...`).
+*   Maps the email to a secure, isolated system user.
+*   Updates Postfix virtual alias maps.
+
+#### `arkli mail info <user> -n <project_name>`
+Displays connection details for your mail clients (Outlook, Apple Mail, etc.).
+*   Shows SMTP/IMAP hostnames, ports, and usernames.
+
+#### `arkli mail dns -n <project_name>`
+Shows the exact DNS records you need to add to your domain registrar.
+*   Includes **MX**, **SPF**, **DMARC**, and **DKIM** records.
+
+#### `arkli mail verify -n <project_name>`
+Checks the health of your mail server services (Postfix/Dovecot).
+
+#### `arkli mail webmail install -n <project_name>`
+**✨ NEW**: Deploys a **Roundcube** webmail panel for your project.
+*   **URL**: Default is `https://webmail.yourdomain.com`.
+*   Includes full SSL and Nginx setup automatically.
+
+---
+
+### 🛠 Tools & Utilities
+
+#### `arkli monitor`
+Displays a dashboard of your server's health.
+*   Lists all running Docker containers.
+*   Shows CPU/Memory usage.
+*   Lists active ports.
+
+#### `arkli migrate`
+Helps run database migrations for your projects (Context-aware).
 
 ---
 
