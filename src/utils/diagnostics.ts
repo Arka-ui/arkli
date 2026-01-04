@@ -3,11 +3,19 @@ import { log } from './logger.js';
 import { IS_LINUX } from './system.js';
 import chalk from 'chalk';
 
+export enum FixType {
+    NONE = 'none',
+    MISSING_SSL = 'missing_ssl',
+    PORT_CONFLICT = 'port_conflict',
+    PERMISSION_ERROR = 'permission_error'
+}
+
 export interface ServiceDiagnosis {
     service: string;
     status: string;
     logs: string;
     suggestion?: string;
+    fixType: FixType;
 }
 
 export const checkServiceStatus = async (service: string): Promise<string> => {
@@ -38,19 +46,24 @@ export const diagnoseServiceFailure = async (service: string): Promise<ServiceDi
     const logs = await getServiceLogs(service);
 
     let suggestion: string | undefined;
+    let fixType: FixType = FixType.NONE;
 
     // Basic heuristic analysis
     if (logs.includes('Address already in use')) {
         suggestion = 'Port conflict detected. Check if another service is using the mail ports (25, 143, 587, 993).';
+        fixType = FixType.PORT_CONFLICT;
     } else if (logs.includes('Permission denied')) {
         suggestion = 'Permission error. Check file ownership of configuration files or SSL certs.';
-    } else if (logs.includes('SSL configuration error') || logs.includes('No such file or directory')) {
+        fixType = FixType.PERMISSION_ERROR;
+    } else if (logs.includes('SSL configuration error') || logs.includes('No such file or directory') && service === 'dovecot') {
         suggestion = 'SSL/TLS Certificate missing or invalid path. Ensure Certbot ran successfully.';
+        fixType = FixType.MISSING_SSL;
     } else if (logs.includes('syntax error')) {
         suggestion = 'Configuration syntax error. The generated config file might have a typo.';
+        // No auto-fix for syntax error yet
     }
 
-    return { service, status, logs, suggestion };
+    return { service, status, logs, suggestion, fixType };
 };
 
 export const printDiagnosis = (diagnosis: ServiceDiagnosis) => {

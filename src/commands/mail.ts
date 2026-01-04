@@ -13,7 +13,7 @@ import {
     generateDovecot10Ssl,
     generateDovecot10Master
 } from '../utils/mail-config.js';
-import { diagnoseServiceFailure, printDiagnosis } from '../utils/diagnostics.js';
+import { diagnoseServiceFailure, printDiagnosis, FixType } from '../utils/diagnostics.js';
 
 export const mailCommand = new Command('mail')
     .description('Manage mail configurations');
@@ -23,6 +23,13 @@ mailCommand.command('setup')
     .requiredOption('-n, --name <name>', 'Project name')
     .action(async (options) => {
         const { ensureDependency } = await import('../utils/dependencies.js');
+        // Import cert setup action handler or similar logic if possible avoiding circular deps
+        // Ideally we'd invoke the shared logic. For now, running CLI command recursively is safest or extracting logic.
+        // We will execute the CLI command to avoid import issues.
+        const runCertSetup = async (domain: string) => {
+            log.info(`🚑 Auto-Fixing: Running cert setup for ${domain}...`);
+            await execa('arkli', ['cert', 'setup', domain], { stdio: 'inherit' });
+        };
 
         const project = await getProject(options.name);
         if (!project || !project.domain) {
@@ -73,7 +80,17 @@ mailCommand.command('setup')
                     log.error('Failed to restart Postfix. Running diagnostics...');
                     const diagnosis = await diagnoseServiceFailure('postfix');
                     printDiagnosis(diagnosis);
-                    throw e; // Re-throw to stop
+                    if (diagnosis.fixType === FixType.MISSING_SSL) {
+                        try {
+                            await runCertSetup(domain);
+                            log.info('Retrying Postfix restart...');
+                            await execa('sudo', ['systemctl', 'restart', 'postfix'], { stdio: 'inherit' });
+                        } catch (fixErr) {
+                            log.error('Auto-fix failed.');
+                        }
+                    } else {
+                        throw e;
+                    }
                 }
 
                 try {
@@ -82,7 +99,17 @@ mailCommand.command('setup')
                     log.error('Failed to restart Dovecot. Running diagnostics...');
                     const diagnosis = await diagnoseServiceFailure('dovecot');
                     printDiagnosis(diagnosis);
-                    throw e; // Re-throw to stop
+                    if (diagnosis.fixType === FixType.MISSING_SSL) {
+                        try {
+                            await runCertSetup(domain);
+                            log.info('Retrying Dovecot restart...');
+                            await execa('sudo', ['systemctl', 'restart', 'dovecot'], { stdio: 'inherit' });
+                        } catch (fixErr) {
+                            log.error('Auto-fix failed.');
+                        }
+                    } else {
+                        throw e;
+                    }
                 }
 
                 // 5. Firewall
