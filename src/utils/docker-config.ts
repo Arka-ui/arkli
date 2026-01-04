@@ -9,8 +9,7 @@ export const generateRoundcubeCompose = (projectName: string, port: number) => {
         ? `extra_hosts:\n      - "host.docker.internal:host-gateway"`
         : `extra_hosts:\n      - "host.docker.internal:host-gateway"`;
 
-    return `version: '3.8'
-
+    return `
 services:
   roundcube-db:
     image: mariadb:10.5
