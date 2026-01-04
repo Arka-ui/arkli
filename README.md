@@ -35,7 +35,7 @@ It now includes a fully-featured **Mail Server Manager** (Postfix/Dovecot) to ha
 
 ### Install via NPM
 ```bash
-git clone https://github.com/yourusername/arkli.git
+git clone https://github.com/Arka-ui/arkli.git
 cd arkli
 npm install
 npm run build
