@@ -66,6 +66,10 @@ program.addCommand(certCommand);
 
 import { updateCommand } from '../commands/update.js';
 program.addCommand(updateCommand);
+
+import { deleteCommand } from '../commands/delete.js';
+program.addCommand(deleteCommand);
+
 // const certCmd = program.command('cert').description('Manage SSL certificates');
 // ...
 
