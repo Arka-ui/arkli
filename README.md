@@ -15,6 +15,7 @@ It now includes a fully-featured **Mail Server Manager** (Postfix/Dovecot) to ha
 
 *   **⚡ Instant Scaffolding**: initialize projects with auto-generated `Dockerfile` and `docker-compose.yml`.
 *   **🧠 Environment Intelligence**: Automatically detects missing tools (Docker, Nginx, etc.) and installs them for you.
+*   **🚑 Self-Healing Diagnostics**: Automatically analyzes failure logs (like failed Dovecot restarts) and suggests fixes.
 *   **🔒 Complete Isolation**: Sensitive data (`.env`, databases) is automatically moved to a "Brain" directory, keeping your codebase clean and safe.
 *   **🐳 Docker Architecture**: Every project runs in its own container with automatically assigned unique ports.
 *   **🌐 Auto-Configuration**: Automatically generates and applies Nginx reverse proxy configurations for your custom domains.

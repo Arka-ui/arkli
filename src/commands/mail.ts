@@ -13,6 +13,7 @@ import {
     generateDovecot10Ssl,
     generateDovecot10Master
 } from '../utils/mail-config.js';
+import { diagnoseServiceFailure, printDiagnosis } from '../utils/diagnostics.js';
 
 export const mailCommand = new Command('mail')
     .description('Manage mail configurations');
@@ -48,7 +49,12 @@ mailCommand.command('setup')
                 if (!await fs.pathExists('/etc/postfix/virtual')) {
                     await writePrivilegedFile('/etc/postfix/virtual', '');
                 }
-                await execa('sudo', ['postmap', '/etc/postfix/virtual'], { stdio: 'inherit' });
+
+                try {
+                    await execa('sudo', ['postmap', '/etc/postfix/virtual'], { stdio: 'inherit' });
+                } catch (e) {
+                    log.warn('Postmap failed, but continuing as it might be first run.');
+                }
 
                 // 3. Configure Dovecot
                 log.info('Configuring Dovecot...');
@@ -60,8 +66,24 @@ mailCommand.command('setup')
 
                 // 4. Restart Services
                 log.info('Restarting services...');
-                await execa('sudo', ['systemctl', 'restart', 'postfix'], { stdio: 'inherit' });
-                await execa('sudo', ['systemctl', 'restart', 'dovecot'], { stdio: 'inherit' });
+
+                try {
+                    await execa('sudo', ['systemctl', 'restart', 'postfix'], { stdio: 'inherit' });
+                } catch (e: any) {
+                    log.error('Failed to restart Postfix. Running diagnostics...');
+                    const diagnosis = await diagnoseServiceFailure('postfix');
+                    printDiagnosis(diagnosis);
+                    throw e; // Re-throw to stop
+                }
+
+                try {
+                    await execa('sudo', ['systemctl', 'restart', 'dovecot'], { stdio: 'inherit' });
+                } catch (e: any) {
+                    log.error('Failed to restart Dovecot. Running diagnostics...');
+                    const diagnosis = await diagnoseServiceFailure('dovecot');
+                    printDiagnosis(diagnosis);
+                    throw e; // Re-throw to stop
+                }
 
                 // 5. Firewall
                 await execa('sudo', ['ufw', 'allow', 'PostFix'], { stdio: 'inherit' });
@@ -70,7 +92,8 @@ mailCommand.command('setup')
 
                 log.success('Mail server configured successfully with SSL and Virtual Aliases.');
             } catch (e: any) {
-                log.error(`Setup failed: ${e.message}`);
+                // Main catch block handles generic errors, but we already diagnosed specific service failures above
+                log.error(`Setup process incomplete due to errors.`);
             }
         } else {
             log.info('(Simulation) Config files generated and services restarted.');
