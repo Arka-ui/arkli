@@ -284,7 +284,95 @@ mailCommand.command('verify')
             } catch (e) {
                 log.error('Failed to check services.');
             }
-        } else {
             log.info('(Simulation) Services verified: Postfix [Active], Dovecot [Active]');
         }
     });
+
+import { generateRoundcubeCompose } from '../utils/docker-config.js';
+
+const webmail = mailCommand.command('webmail')
+    .description('Manage Webmail Interface (Roundcube)');
+
+webmail.command('install')
+    .requiredOption('-n, --name <name>', 'Project name')
+    .option('-s, --subdomain <subdomain>', 'Subdomain for webmail (default: webmail.<domain>)')
+    .description('Install Roundcube Webmail')
+    .action(async (options) => {
+        const { ensureDependency } = await import('../utils/dependencies.js');
+        // Check Docker
+        await ensureDependency('docker');
+
+        const project = await getProject(options.name);
+        if (!project || !project.domain) {
+            log.error('Project not linked or found.');
+            return;
+        }
+
+        const subdomain = options.subdomain || `webmail.${project.domain}`;
+        log.info(`Installing Webmail at https://${subdomain} ...`);
+
+        // 1. Prepare Directory
+        const webmailDir = path.join(project.dataPath, 'webmail');
+        await fs.ensureDir(webmailDir);
+
+        // 2. Generate Docker Compose
+        // Assign a random port for webmail UI (internal)
+        // In real app, we'd manage port registry. Quick hack: random 8000-9000
+        const port = Math.floor(Math.random() * (9000 - 8000 + 1) + 8000);
+        const composeContent = generateRoundcubeCompose(options.name, port);
+
+        await fs.writeFile(path.join(webmailDir, 'docker-compose.yml'), composeContent);
+        log.info(`Generated Webmail configuration on internal port ${port}`);
+
+        // 3. Start Container
+        log.info('Starting Webmail container...');
+        try {
+            await execa('docker', ['compose', 'up', '-d'], { cwd: webmailDir, stdio: 'inherit' });
+        } catch (e: any) {
+            log.error(`Failed to start webmail container: ${e.message}`);
+            return;
+        }
+
+        // 4. Configure Nginx Proxy
+        // We reuse the 'arkli link' logic conceptually, but applying specifically for this subdomain.
+        // For simplicity, we'll invoke generating a new config file for this subdomain.
+        try {
+            // Simplified Nginx Block for Webmail
+            const nginxConfig = `
+server {
+    listen 80;
+    server_name ${subdomain};
+
+    location / {
+        proxy_pass http://localhost:${port};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+`;
+            const nginxPath = `/etc/nginx/sites-available/${subdomain}`;
+            if (IS_LINUX) {
+                await writePrivilegedFile(nginxPath, nginxConfig);
+                await execa('sudo', ['ln', '-sf', nginxPath, `/etc/nginx/sites-enabled/${subdomain}`], { stdio: 'inherit' });
+                await execa('sudo', ['nginx', '-t'], { stdio: 'inherit' });
+                await execa('sudo', ['systemctl', 'reload', 'nginx'], { stdio: 'inherit' });
+                log.info('Nginx configured for Webmail.');
+            } else {
+                log.info(`(Simulation) Nginx config written to ${nginxPath}`);
+            }
+
+            // 5. SSL
+            log.info('Obtaining SSL certificate for Webmail...');
+            await execa('arkli', ['cert', 'setup', subdomain], { stdio: 'inherit' });
+
+            log.success(`Webmail installed successfully!`);
+            log.success(`Access it at: https://${subdomain}`);
+            log.info(`Login with your full email (e.g. contact@${project.domain}) and password.`);
+
+        } catch (e: any) {
+            log.error(`Failed during Nginx/SSL setup: ${e.message}`);
+        }
+    });
+
