@@ -73,8 +73,24 @@ Self-updates Arkli to the latest version and performs system-wide security updat
 
 ---
 
-### 🌐 Web & Domain
+### 🖥️ Web Dashboard (Premium UI)
+#### `arkli dashboard`
+Launches the **Arkli Premium Dashboard**, a graphical user interface for managing your server.
+*   **Real-time Status**: Monitor your projects and container health live.
+*   **App Store**: Deploy applications like WordPress, Ghost, or Next.js with one click.
+*   **Terminal Streaming**: View logs and server output directly in the browser.
 
+---
+
+### 🛍️ App Store & Templates
+#### `arkli init <name> -t <template>`
+Initialize a project using a pre-configured template.
+*   **Templates**: `wordpress`, `ghost`, `nextjs` (default).
+*   **Example**: `arkli init my-blog -t wordpress`
+
+---
+
+### 🌐 Web & Domain
 #### `arkli link -d <domain> -n <project_name>`
 Exposes your project to the internet via Nginx.
 *   Generates an Nginx reverse proxy configuration.
@@ -91,8 +107,8 @@ Secures a domain with a generic Let's Encrypt SSL certificate using Certbot.
 
 #### `arkli mail setup -n <project_name>`
 Turns your server into a full-featured mail server for the project's domain.
-*   Installs Postfix & Dovecot.
-*   Configures SSL/TLS, SASL Authentication, and Maildir.
+*   **Auto-Webmail**: Automatically installs **Roundcube Webmail** at `webmail.yourdomain.com`.
+*   Installs Postfix & Dovecot with SSL/TLS, SASL, and Maildir.
 *   **Auto-Heals**: Automatically fixes common errors (like missing SSL).
 
 #### `arkli mail create <user> -n <project_name>`
@@ -110,11 +126,6 @@ Shows the exact DNS records you need to add to your domain registrar.
 
 #### `arkli mail verify -n <project_name>`
 Checks the health of your mail server services (Postfix/Dovecot).
-
-#### `arkli mail webmail install -n <project_name>`
-**✨ NEW**: Deploys a **Roundcube** webmail panel for your project.
-*   **URL**: Default is `https://webmail.yourdomain.com`.
-*   Includes full SSL and Nginx setup automatically.
 
 ---
 
