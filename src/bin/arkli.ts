@@ -70,6 +70,10 @@ program.addCommand(updateCommand);
 import { deleteCommand } from '../commands/delete.js';
 program.addCommand(deleteCommand);
 
+import { dashboardCommand } from '../commands/dashboard.js';
+program.addCommand(dashboardCommand);
+
+
 // const certCmd = program.command('cert').description('Manage SSL certificates');
 // ...
 

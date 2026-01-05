@@ -23,19 +23,7 @@ export const getDataDir = (projectName: string) => {
 
 const getRegistryPath = () => path.join(getHomeDir(), '.arkli', 'projects.json');
 
-export const registerProject = async (name: string, projectPath: string, dataPath: string) => {
-    const registryPath = getRegistryPath();
-    await fs.ensureFile(registryPath);
-    let registry: Record<string, any> = {};
-    try {
-        registry = await fs.readJson(registryPath);
-    } catch (e) {
-        // ignore if empty/missing
-    }
 
-    registry[name] = { projectPath, dataPath, createdAt: new Date().toISOString() };
-    await fs.writeJson(registryPath, registry, { spaces: 2 });
-};
 
 export const unregisterProject = async (name: string) => {
     const registryPath = getRegistryPath();
@@ -85,7 +73,43 @@ export const getProject = async (name: string) => {
     }
 };
 
-export const ensureProjectStructure = async (projectName: string) => {
+
+export const getRegistryPoints = async (): Promise<Record<string, any>> => {
+    const registryPath = getRegistryPath();
+    try {
+        return await fs.readJson(registryPath);
+    } catch (e) {
+        return {};
+    }
+}
+
+export const getNextAvailablePort = async (): Promise<number> => {
+    const registry = await getRegistryPoints();
+    let maxPort = 3000;
+    for (const key in registry) {
+        if (registry[key].port) {
+            const p = parseInt(registry[key].port);
+            if (p >= maxPort) maxPort = p + 1;
+        }
+    }
+    return maxPort;
+};
+
+export const registerProject = async (name: string, projectPath: string, dataPath: string, port: number) => {
+    const registryPath = getRegistryPath();
+    await fs.ensureFile(registryPath);
+    let registry: Record<string, any> = {};
+    try {
+        registry = await fs.readJson(registryPath);
+    } catch (e) {
+        // ignore if empty/missing
+    }
+
+    registry[name] = { projectPath, dataPath, port, createdAt: new Date().toISOString() };
+    await fs.writeJson(registryPath, registry, { spaces: 2 });
+};
+
+export const ensureProjectStructure = async (projectName: string, port: number) => {
     const projectPath = path.resolve(process.cwd(), projectName);
     const dataPath = getDataDir(projectName);
 
@@ -110,13 +134,14 @@ export const ensureProjectStructure = async (projectName: string) => {
         const config = {
             name: projectName,
             dataPath: dataPath,
+            port: port,
             createdAt: new Date().toISOString()
         };
 
         await fs.writeJson(path.join(projectPath, 'arkli.json'), config, { spaces: 2 });
 
         // Register globally
-        await registerProject(projectName, projectPath, dataPath);
+        await registerProject(projectName, projectPath, dataPath, port);
 
         log.success(`Project initialized. Config stored in arkli.json`);
 

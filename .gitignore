@@ -5,6 +5,7 @@ node_modules
 # Build
 dist
 build
+src/dashboard/client/dist
 
 # Environment
 .env
